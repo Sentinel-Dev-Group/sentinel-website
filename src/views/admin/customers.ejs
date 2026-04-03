@@ -1,0 +1,321 @@
+<%- include('../_partials/header', { Title: 'Admin — Customers', User, Settings }) %>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <a href="/admin" class="text-gray-500 hover:text-white text-sm transition-colors">Admin</a>
+        <span class="text-gray-600">/</span>
+        <span class="text-sm text-white">Customers</span>
+      </div>
+      <h1 class="text-3xl font-black">Customers</h1>
+    </div>
+    <div class="flex items-center gap-6">
+      <div class="text-right">
+        <p class="text-2xl font-black text-cyan-400" id="total-customers">—</p>
+        <p class="text-xs text-gray-500">Total customers</p>
+      </div>
+      <div class="text-right">
+        <p class="text-2xl font-black text-cyan-400" id="total-customer-revenue">—</p>
+        <p class="text-xs text-gray-500">Total revenue</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="flex items-center gap-3 mb-6">
+    <div class="relative flex-1 max-w-sm">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+      <input type="text"
+             id="search-input"
+             placeholder="Search by name or email..."
+             oninput="searchCustomers(this.value)"
+             class="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 pl-8 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors">
+    </div>
+    <select id="sort-select"
+            onchange="sortCustomers(this.value)"
+            class="bg-white/5 border border-white/10 rounded-lg px-4 py-1.5 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-colors">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="spent">Highest spend</option>
+      <option value="orders">Most orders</option>
+    </select>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white/3 border border-white/8 rounded-2xl overflow-hidden" id="customers-table">
+    <div class="p-8 text-center text-gray-600 text-sm">Loading...</div>
+  </div>
+
+</div>
+
+<!-- Customer detail modal -->
+<div id="detail-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeDetail()"></div>
+  <div class="relative flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-6 border-b border-white/8">
+        <h2 class="text-xl font-bold">Customer Detail</h2>
+        <button onclick="closeDetail()" class="text-gray-500 hover:text-white transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-6" id="detail-content"></div>
+
+      <!-- Generate license section -->
+      <div class="p-6 border-t border-white/8">
+        <h3 class="text-sm font-bold text-gray-300 mb-3">
+          <i class="fas fa-key text-cyan-400 mr-2"></i>Manually generate a license key
+        </h3>
+        <input type="hidden" id="gift-user-id">
+        <div class="flex gap-3">
+          <select id="gift-product-id"
+                  class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-colors">
+            <option value="">Select product...</option>
+          </select>
+          <button onclick="generateKey()"
+                  class="px-4 py-2.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium rounded-xl hover:bg-cyan-500/20 transition-colors whitespace-nowrap">
+            Generate Key
+          </button>
+        </div>
+        <p id="gift-result" class="text-xs mt-2 text-gray-600"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allCustomers = [];
+let allProducts  = [];
+let currentSearch = '';
+let currentSort   = 'newest';
+
+async function loadCustomers() {
+  try {
+    const [custRes, prodRes] = await Promise.all([
+      fetch('/api/admin/customers'),
+      fetch('/api/admin/products'),
+    ]);
+    allCustomers = await custRes.json();
+    allProducts  = await prodRes.json();
+
+    document.getElementById('total-customers').textContent = allCustomers.length;
+
+    const revenue = allCustomers
+      .reduce((s, c) => s + parseFloat(c.total_spent || 0), 0);
+    document.getElementById('total-customer-revenue').textContent = '£' + revenue.toFixed(2);
+
+    // Populate product select in modal
+    const sel = document.getElementById('gift-product-id');
+    sel.innerHTML = '<option value="">Select product...</option>';
+    allProducts.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+    });
+
+    renderCustomers();
+  } catch(e) {
+    document.getElementById('customers-table').innerHTML =
+      '<div class="p-8 text-center text-red-400 text-sm">Failed to load customers.</div>';
+  }
+}
+
+function searchCustomers(val) {
+  currentSearch = val.toLowerCase();
+  renderCustomers();
+}
+
+function sortCustomers(val) {
+  currentSort = val;
+  renderCustomers();
+}
+
+function renderCustomers() {
+  let list = [...allCustomers];
+
+  if (currentSearch) {
+    list = list.filter(c =>
+      (c.userName  || '').toLowerCase().includes(currentSearch) ||
+      (c.userEmail || '').toLowerCase().includes(currentSearch)
+    );
+  }
+
+  if (currentSort === 'newest') {
+    list.sort((a, b) => parseInt(b.createdAt) - parseInt(a.createdAt));
+  } else if (currentSort === 'oldest') {
+    list.sort((a, b) => parseInt(a.createdAt) - parseInt(b.createdAt));
+  } else if (currentSort === 'spent') {
+    list.sort((a, b) => parseFloat(b.total_spent) - parseFloat(a.total_spent));
+  } else if (currentSort === 'orders') {
+    list.sort((a, b) => b.total_orders - a.total_orders);
+  }
+
+  if (list.length === 0) {
+    document.getElementById('customers-table').innerHTML =
+      '<div class="p-12 text-center text-gray-600 text-sm">No customers found.</div>';
+    return;
+  }
+
+  document.getElementById('customers-table').innerHTML = `
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-white/8 text-gray-500 text-xs uppercase tracking-wide">
+          <th class="text-left px-5 py-3">Customer</th>
+          <th class="text-left px-5 py-3">Joined</th>
+          <th class="text-left px-5 py-3">Orders</th>
+          <th class="text-left px-5 py-3">Licenses</th>
+          <th class="text-left px-5 py-3">IP</th>
+          <th class="text-right px-5 py-3">Spent</th>
+          <th class="text-right px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(c => `
+          <tr class="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-3">
+                <img src="${c.userImage || '/img/placeholder.png'}"
+                     alt="${c.userName}"
+                     class="w-9 h-9 rounded-full border border-white/10 object-cover"
+                     onerror="this.src='/img/placeholder.png'">
+                <div>
+                  <p class="font-medium text-white">${c.userName}</p>
+                  <p class="text-xs text-gray-500">${c.userEmail}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-4 text-gray-400 whitespace-nowrap">
+              ${new Date(parseInt(c.createdAt) * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </td>
+            <td class="px-5 py-4">
+              <span class="px-2 py-0.5 text-xs rounded-full border ${
+                c.total_orders > 0
+                  ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20'
+                  : 'text-gray-500 bg-white/3 border-white/10'
+              }">${c.total_orders}</span>
+            </td>
+            <td class="px-5 py-4">
+              <span class="px-2 py-0.5 text-xs rounded-full border ${
+                c.total_keys > 0
+                  ? 'text-green-400 bg-green-500/10 border-green-500/20'
+                  : 'text-gray-500 bg-white/3 border-white/10'
+              }">${c.total_keys}</span>
+            </td>
+            <td class="px-5 py-4">
+              <code class="text-xs text-gray-500 font-mono">${c.ip || '—'}</code>
+            </td>
+            <td class="px-5 py-4 text-right font-bold ${
+              parseFloat(c.total_spent) > 0 ? 'text-white' : 'text-gray-600'
+            }">
+              £${parseFloat(c.total_spent || 0).toFixed(2)}
+            </td>
+            <td class="px-5 py-4 text-right">
+              <button onclick='openDetail(${JSON.stringify(c).replace(/'/g, "&#39;")})'
+                      class="px-3 py-1.5 border border-white/10 text-gray-400 text-xs rounded-lg hover:border-cyan-500/30 hover:text-cyan-400 transition-all">
+                Detail
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+function openDetail(customer) {
+  document.getElementById('gift-user-id').value = customer.id;
+  document.getElementById('gift-result').textContent = '';
+
+  const joined = new Date(parseInt(customer.createdAt) * 1000)
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="flex items-center gap-4 mb-6">
+      <img src="${customer.userImage || '/img/placeholder.png'}"
+           alt="${customer.userName}"
+           class="w-16 h-16 rounded-full border-2 border-cyan-500/30 object-cover"
+           onerror="this.src='/img/placeholder.png'">
+      <div>
+        <h3 class="text-xl font-bold text-white">${customer.userName}</h3>
+        <p class="text-gray-400 text-sm">${customer.userEmail}</p>
+        <p class="text-gray-600 text-xs mt-0.5">Joined ${joined}</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mb-6">
+      <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+        <p class="text-2xl font-black text-cyan-400">${customer.total_orders}</p>
+        <p class="text-xs text-gray-500 mt-1">Orders</p>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+        <p class="text-2xl font-black text-cyan-400">${customer.total_keys}</p>
+        <p class="text-xs text-gray-500 mt-1">Licenses</p>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+        <p class="text-2xl font-black text-cyan-400">£${parseFloat(customer.total_spent || 0).toFixed(2)}</p>
+        <p class="text-xs text-gray-500 mt-1">Total spent</p>
+      </div>
+    </div>
+    <div class="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2 text-sm">
+      <div class="flex justify-between">
+        <span class="text-gray-500">User ID</span>
+        <code class="text-xs font-mono text-gray-400">${customer.id}</code>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500">IP Address</span>
+        <code class="text-xs font-mono text-gray-400">${customer.ip || '—'}</code>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500">Role</span>
+        <span class="px-2 py-0.5 text-xs rounded-full border ${
+          customer.role === 'admin'
+            ? 'text-red-400 bg-red-500/10 border-red-500/20'
+            : 'text-gray-400 bg-white/3 border-white/10'
+        }">${customer.role || 'user'}</span>
+      </div>
+    </div>`;
+
+  document.getElementById('detail-modal').classList.remove('hidden');
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').classList.add('hidden');
+}
+
+async function generateKey() {
+  const userId    = document.getElementById('gift-user-id').value;
+  const productId = document.getElementById('gift-product-id').value;
+  const result    = document.getElementById('gift-result');
+
+  if (!productId) {
+    result.textContent = 'Please select a product.';
+    result.className   = 'text-xs mt-2 text-red-400';
+    return;
+  }
+
+  result.textContent = 'Generating...';
+  result.className   = 'text-xs mt-2 text-gray-400';
+
+  try {
+    const res  = await fetch('/api/admin/licenses/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, product_id: productId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      result.textContent = `✓ Key generated: ${data.key}`;
+      result.className   = 'text-xs mt-2 text-green-400 font-mono';
+    } else {
+      result.textContent = data.error || 'Failed to generate key.';
+      result.className   = 'text-xs mt-2 text-red-400';
+    }
+  } catch(e) {
+    result.textContent = 'Network error.';
+    result.className   = 'text-xs mt-2 text-red-400';
+  }
+}
+
+loadCustomers();
+</script>
+
+<%- include('../_partials/footer', { User, Settings }) %>

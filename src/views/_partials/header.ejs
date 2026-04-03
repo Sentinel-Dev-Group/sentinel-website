@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <title><%= `${Title} — ${Settings.name}` %></title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="<%= Settings.dest %>">
+  <meta name="theme-color" content="#06b6d4">
+  <meta property="og:site_name" content="<%= Settings.name %>" />
+  <meta property="og:title" content="<%= Title %> — <%= Settings.name %>" />
+  <meta property="og:type" content="website" />
+  <meta property="og:description" content="<%= Settings.dest %>" />
+  <meta property="og:image" content="<%= Settings.logo %>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="twitter:image" content="<%= Settings.logo %>">
+  <link rel="apple-touch-icon" href="<%= Settings.logo %>">
+  <link rel="icon" type="image/png" href="<%= Settings.logo %>">
+  <link rel="stylesheet" href="/css/output.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="/js/faall.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    .nav-link {
+      position: relative;
+      color: rgba(255,255,255,0.6);
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: rgba(255,255,255,1); }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      width: 0;
+      height: 1.5px;
+      background: linear-gradient(90deg, #06b6d4, #3b82f6);
+      transform: translateX(-50%);
+      transition: width 0.2s;
+    }
+    .nav-link:hover::after,
+    .nav-link.active::after { width: 100%; }
+    .nav-link.active { color: #06b6d4; }
+
+    /* Mobile menu */
+    #mobile-menu {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-in-out;
+    }
+    #mobile-menu.open { max-height: 500px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body class="min-h-screen bg-black text-white antialiased">
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 left-0 right-0 z-40 border-b border-white/5 bg-black/80 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-2.5 flex-shrink-0">
+          <div class="w-8 h-8 rounded-lg overflow-hidden border border-white/10">
+            <img src="<%= Settings.logo %>" alt="<%= Settings.name %>"
+                 class="w-full h-full object-cover"
+                 onerror="this.style.display='none'">
+          </div>
+          <span class="font-black text-lg tracking-tight">
+            <span class="text-white">Sentinel</span><span class="text-cyan-400"> Dev</span>
+          </span>
+        </a>
+
+        <!-- Desktop nav links -->
+        <div class="hidden md:flex items-center gap-6">
+          <a href="/"
+             class="nav-link text-sm font-medium pb-0.5 <%= Title === 'Home' ? 'active' : '' %>">
+            Home
+          </a>
+          <a href="/store"
+             class="nav-link text-sm font-medium pb-0.5 <%= Title === 'Store' || Title === 'Store' ? 'active' : '' %>">
+            Store
+          </a>
+          <a href="/store?category=minecraft"
+             class="nav-link text-sm font-medium pb-0.5">
+            Minecraft
+          </a>
+          <a href="/store?category=dayz"
+             class="nav-link text-sm font-medium pb-0.5">
+            DayZ
+          </a>
+          <% if (User.loggedIn && locals.Settings && require('../../../config').SiteInformation.OwnerIDS.includes(User.id)) { %>
+            <a href="/admin"
+               class="nav-link text-sm font-medium pb-0.5 text-red-400 hover:text-red-300">
+              Admin
+            </a>
+          <% } %>
+        </div>
+
+        <!-- Desktop right side -->
+        <div class="hidden md:flex items-center gap-3">
+          <% if (User.loggedIn) { %>
+            <a href="/dashboard"
+               class="flex items-center gap-2 px-3 py-1.5 border border-white/10 hover:border-white/20 rounded-xl text-sm transition-all group">
+              <img src="<%= User.userImage %>" alt="<%= User.userName %>"
+                   class="w-6 h-6 rounded-full border border-white/20 object-cover"
+                   onerror="this.src='/img/placeholder.png'">
+              <span class="text-gray-300 group-hover:text-white transition-colors"><%= User.userName %></span>
+            </a>
+            <a href="/logout"
+               class="px-3 py-1.5 text-sm text-gray-500 hover:text-white transition-colors">
+              Sign out
+            </a>
+          <% } else { %>
+            <a href="/login"
+               class="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">
+              Sign in
+            </a>
+            <a href="/login"
+               class="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black text-sm font-bold rounded-xl transition-all hover:scale-105">
+              Get Started
+            </a>
+          <% } %>
+        </div>
+
+        <!-- Mobile menu button -->
+        <button onclick="toggleMobileMenu()"
+                class="md:hidden p-2 text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-bars" id="menu-icon"></i>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="md:hidden border-t border-white/5">
+      <div class="max-w-7xl mx-auto px-4 py-4 space-y-1">
+        <a href="/" class="block px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+          <i class="fas fa-home mr-2 text-cyan-400"></i>Home
+        </a>
+        <a href="/store" class="block px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+          <i class="fas fa-store mr-2 text-cyan-400"></i>Store
+        </a>
+        <a href="/store?category=minecraft" class="block px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+          <i class="fas fa-cube mr-2 text-cyan-400"></i>Minecraft
+        </a>
+        <a href="/store?category=dayz" class="block px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+          <i class="fas fa-biohazard mr-2 text-cyan-400"></i>DayZ
+        </a>
+        <% if (User.loggedIn) { %>
+          <a href="/dashboard" class="block px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+            <i class="fas fa-user mr-2 text-cyan-400"></i>Dashboard
+          </a>
+          <% if (locals.Settings && require('../../../config').SiteInformation.OwnerIDS.includes(User.id)) { %>
+            <a href="/admin" class="block px-3 py-2.5 rounded-xl text-sm text-red-400 hover:text-red-300 hover:bg-white/5 transition-all">
+              <i class="fas fa-shield-alt mr-2"></i>Admin Panel
+            </a>
+          <% } %>
+          <a href="/logout" class="block px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-all">
+            <i class="fas fa-sign-out-alt mr-2"></i>Sign out
+          </a>
+        <% } else { %>
+          <div class="pt-2 border-t border-white/5">
+            <a href="/login" class="block w-full text-center px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm rounded-xl transition-all">
+              Sign in / Register
+            </a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Spacer for fixed navbar -->
+  <div class="h-16"></div>
+
+  <!-- Page wrapper -->
+  <div class="min-h-screen flex flex-col">
+    <main class="flex-1">

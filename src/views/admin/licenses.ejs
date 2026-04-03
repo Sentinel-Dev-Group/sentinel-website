@@ -1,0 +1,386 @@
+<%- include('../_partials/header', { Title: 'Admin — Licenses', User, Settings }) %>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <a href="/admin" class="text-gray-500 hover:text-white text-sm transition-colors">Admin</a>
+        <span class="text-gray-600">/</span>
+        <span class="text-sm text-white">Licenses</span>
+      </div>
+      <h1 class="text-3xl font-black">Licenses</h1>
+    </div>
+    <div class="flex items-center gap-6">
+      <div class="text-right">
+        <p class="text-2xl font-black text-cyan-400" id="total-active">—</p>
+        <p class="text-xs text-gray-500">Active keys</p>
+      </div>
+      <div class="text-right">
+        <p class="text-2xl font-black text-red-400" id="total-suspended">—</p>
+        <p class="text-xs text-gray-500">Suspended</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex flex-wrap items-center gap-3 mb-6">
+    <button onclick="filterLicenses('all')" id="filter-all"
+            class="px-3 py-1.5 text-sm rounded-lg border border-cyan-500 text-cyan-400 bg-cyan-500/10 transition-all">
+      All
+    </button>
+    <button onclick="filterLicenses('active')" id="filter-active"
+            class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all">
+      Active
+    </button>
+    <button onclick="filterLicenses('suspended')" id="filter-suspended"
+            class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all">
+      Suspended
+    </button>
+    <button onclick="filterLicenses('expired')" id="filter-expired"
+            class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all">
+      Expired
+    </button>
+    <div class="ml-auto relative">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+      <input type="text"
+             id="search-input"
+             placeholder="Search key, customer or product..."
+             oninput="searchLicenses(this.value)"
+             class="w-72 bg-white/5 border border-white/10 rounded-lg py-1.5 pl-8 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors">
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white/3 border border-white/8 rounded-2xl overflow-hidden" id="licenses-table">
+    <div class="p-8 text-center text-gray-600 text-sm">Loading...</div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex items-center justify-between mt-5 hidden" id="pagination">
+    <p class="text-sm text-gray-500" id="pagination-info"></p>
+    <div class="flex gap-2" id="pagination-buttons"></div>
+  </div>
+
+</div>
+
+<!-- License detail modal -->
+<div id="detail-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeDetail()"></div>
+  <div class="relative flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-lg">
+      <div class="flex items-center justify-between p-6 border-b border-white/8">
+        <h2 class="text-xl font-bold">License Detail</h2>
+        <button onclick="closeDetail()" class="text-gray-500 hover:text-white transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-6" id="detail-content"></div>
+      <div class="flex flex-wrap gap-3 p-6 border-t border-white/8" id="detail-actions"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allLicenses   = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let currentPage   = 1;
+const perPage     = 25;
+let selectedLicense = null;
+
+async function loadLicenses() {
+  try {
+    const res = await fetch('/api/admin/licenses');
+    allLicenses = await res.json();
+
+    const active    = allLicenses.filter(l => l.status === 'active').length;
+    const suspended = allLicenses.filter(l => l.status === 'suspended').length;
+    document.getElementById('total-active').textContent    = active;
+    document.getElementById('total-suspended').textContent = suspended;
+
+    renderLicenses();
+  } catch(e) {
+    document.getElementById('licenses-table').innerHTML =
+      '<div class="p-8 text-center text-red-400 text-sm">Failed to load licenses.</div>';
+  }
+}
+
+function filterLicenses(status) {
+  currentFilter = status;
+  currentPage   = 1;
+  ['all','active','suspended','expired'].forEach(s => {
+    const btn = document.getElementById('filter-' + s);
+    btn.className = s === status
+      ? 'px-3 py-1.5 text-sm rounded-lg border border-cyan-500 text-cyan-400 bg-cyan-500/10 transition-all'
+      : 'px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all';
+  });
+  renderLicenses();
+}
+
+function searchLicenses(val) {
+  currentSearch = val.toLowerCase();
+  currentPage   = 1;
+  renderLicenses();
+}
+
+function renderLicenses() {
+  let list = [...allLicenses];
+
+  if (currentFilter !== 'all') {
+    list = list.filter(l => l.status === currentFilter);
+  }
+  if (currentSearch) {
+    list = list.filter(l =>
+      (l.key          || '').toLowerCase().includes(currentSearch) ||
+      (l.userName     || '').toLowerCase().includes(currentSearch) ||
+      (l.userEmail    || '').toLowerCase().includes(currentSearch) ||
+      (l.product_name || '').toLowerCase().includes(currentSearch)
+    );
+  }
+
+  const total = list.length;
+  const start = (currentPage - 1) * perPage;
+  const page  = list.slice(start, start + perPage);
+
+  if (total === 0) {
+    document.getElementById('licenses-table').innerHTML =
+      '<div class="p-12 text-center text-gray-600 text-sm">No licenses found.</div>';
+    document.getElementById('pagination').classList.add('hidden');
+    return;
+  }
+
+  document.getElementById('licenses-table').innerHTML = `
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-white/8 text-gray-500 text-xs uppercase tracking-wide">
+          <th class="text-left px-5 py-3">License Key</th>
+          <th class="text-left px-5 py-3">Customer</th>
+          <th class="text-left px-5 py-3">Product</th>
+          <th class="text-left px-5 py-3">HWID</th>
+          <th class="text-left px-5 py-3">Uses</th>
+          <th class="text-left px-5 py-3">Status</th>
+          <th class="text-left px-5 py-3">Created</th>
+          <th class="text-right px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${page.map(l => `
+          <tr class="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+            <td class="px-5 py-4">
+              <code class="text-xs font-mono text-cyan-300 bg-black/40 px-2 py-1 rounded-lg border border-white/8">
+                ${l.key}
+              </code>
+            </td>
+            <td class="px-5 py-4">
+              <p class="font-medium text-white">${l.userName}</p>
+              <p class="text-xs text-gray-500">${l.userEmail}</p>
+            </td>
+            <td class="px-5 py-4 text-gray-300">${l.product_name}</td>
+            <td class="px-5 py-4">
+              ${l.hwid
+                ? `<code class="text-xs font-mono text-gray-400">${l.hwid.substring(0, 12)}...</code>`
+                : '<span class="text-xs text-yellow-500/70">Not bound</span>'
+              }
+            </td>
+            <td class="px-5 py-4 text-gray-400">${l.uses}</td>
+            <td class="px-5 py-4">
+              <span class="px-2 py-0.5 text-xs rounded-full border ${
+                l.status === 'active'    ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+                l.status === 'suspended' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                                           'text-gray-400 bg-gray-500/10 border-gray-500/20'
+              }">${l.status}</span>
+            </td>
+            <td class="px-5 py-4 text-gray-400 whitespace-nowrap">
+              ${new Date(l.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </td>
+            <td class="px-5 py-4 text-right">
+              <button onclick='openDetail(${JSON.stringify(l).replace(/'/g, "&#39;")})'
+                      class="px-3 py-1.5 border border-white/10 text-gray-400 text-xs rounded-lg hover:border-cyan-500/30 hover:text-cyan-400 transition-all">
+                Manage
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+
+  // Pagination
+  const totalPages = Math.ceil(total / perPage);
+  const pag = document.getElementById('pagination');
+  if (totalPages > 1) {
+    pag.classList.remove('hidden');
+    document.getElementById('pagination-info').textContent =
+      `Showing ${start + 1}–${Math.min(start + perPage, total)} of ${total} licenses`;
+    let btns = '';
+    for (let i = 1; i <= totalPages; i++) {
+      btns += `<button onclick="goPage(${i})"
+                class="px-3 py-1.5 text-xs rounded-lg border transition-all ${
+                  i === currentPage
+                    ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10'
+                    : 'border-white/10 text-gray-400 hover:border-white/30'
+                }">${i}</button>`;
+    }
+    document.getElementById('pagination-buttons').innerHTML = btns;
+  } else {
+    pag.classList.add('hidden');
+  }
+}
+
+function goPage(n) {
+  currentPage = n;
+  renderLicenses();
+}
+
+function openDetail(license) {
+  selectedLicense = license;
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="space-y-4">
+      <div class="bg-black/40 border border-white/8 rounded-xl p-4 text-center">
+        <p class="text-xs text-gray-500 mb-2">License Key</p>
+        <code class="text-sm font-mono text-cyan-300">${license.key}</code>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+          <p class="text-xs text-gray-500 mb-1">Customer</p>
+          <p class="font-medium text-white text-sm">${license.userName}</p>
+          <p class="text-xs text-gray-500">${license.userEmail}</p>
+        </div>
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+          <p class="text-xs text-gray-500 mb-1">Product</p>
+          <p class="font-medium text-white text-sm">${license.product_name}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+          <p class="text-xs text-gray-500 mb-1">Status</p>
+          <span class="px-2 py-0.5 text-xs rounded-full border ${
+            license.status === 'active'    ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+            license.status === 'suspended' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                                             'text-gray-400 bg-gray-500/10 border-gray-500/20'
+          }">${license.status}</span>
+        </div>
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+          <p class="text-xs text-gray-500 mb-1">Total uses</p>
+          <p class="text-xl font-black text-white">${license.uses}</p>
+        </div>
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+          <p class="text-xs text-gray-500 mb-1">Expires</p>
+          <p class="text-sm font-medium text-white">
+            ${license.expires_at
+              ? new Date(license.expires_at).toLocaleDateString('en-GB')
+              : 'Never'}
+          </p>
+        </div>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-2">Hardware ID</p>
+        ${license.hwid
+          ? `<code class="text-xs font-mono text-gray-300">${license.hwid}</code>`
+          : '<p class="text-xs text-yellow-500/70">Not yet bound to a machine</p>'
+        }
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Created</p>
+        <p class="text-sm text-white">
+          ${new Date(license.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
+      </div>
+    </div>`;
+
+  // Action buttons depending on current status
+  const actions = document.getElementById('detail-actions');
+  actions.innerHTML = '';
+
+  if (license.status === 'active') {
+    actions.innerHTML += `
+      <button onclick="licenseAction('suspend')"
+              class="px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl hover:bg-red-500/20 transition-colors">
+        <i class="fas fa-ban mr-2"></i>Suspend
+      </button>`;
+  } else if (license.status === 'suspended') {
+    actions.innerHTML += `
+      <button onclick="licenseAction('activate')"
+              class="px-4 py-2.5 bg-green-500/10 border border-green-500/20 text-green-400 text-sm rounded-xl hover:bg-green-500/20 transition-colors">
+        <i class="fas fa-check mr-2"></i>Reactivate
+      </button>`;
+  }
+
+  if (license.hwid) {
+    actions.innerHTML += `
+      <button onclick="licenseAction('reset-hwid')"
+              class="px-4 py-2.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm rounded-xl hover:bg-yellow-500/20 transition-colors">
+        <i class="fas fa-microchip mr-2"></i>Reset HWID
+      </button>`;
+  }
+
+  actions.innerHTML += `
+    <button onclick="closeDetail()"
+            class="ml-auto px-4 py-2.5 border border-white/10 text-gray-400 text-sm rounded-xl hover:border-white/30 hover:text-white transition-all">
+      Close
+    </button>`;
+
+  document.getElementById('detail-modal').classList.remove('hidden');
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').classList.add('hidden');
+  selectedLicense = null;
+}
+
+async function licenseAction(action) {
+  if (!selectedLicense) return;
+
+  try {
+    const res  = await fetch(`/api/admin/licenses/${selectedLicense.id}/${action}`, { method: 'POST' });
+    const data = await res.json();
+
+    if (data.success) {
+      // Update local state
+      const idx = allLicenses.findIndex(l => l.id === selectedLicense.id);
+      if (idx !== -1) {
+        if (action === 'suspend')    allLicenses[idx].status = 'suspended';
+        if (action === 'activate')   allLicenses[idx].status = 'active';
+        if (action === 'reset-hwid') allLicenses[idx].hwid   = null;
+        selectedLicense = allLicenses[idx];
+      }
+
+      // Refresh stats
+      const active    = allLicenses.filter(l => l.status === 'active').length;
+      const suspended = allLicenses.filter(l => l.status === 'suspended').length;
+      document.getElementById('total-active').textContent    = active;
+      document.getElementById('total-suspended').textContent = suspended;
+
+      const actionLabels = {
+        suspend:     'License suspended.',
+        activate:    'License reactivated.',
+        'reset-hwid': 'HWID reset successfully.',
+      };
+      showToast(actionLabels[action] || 'Done.', 'success');
+
+      closeDetail();
+      renderLicenses();
+    } else {
+      showToast(data.error || 'Action failed.', 'error');
+    }
+  } catch(e) {
+    showToast('Network error.', 'error');
+  }
+}
+
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  const color = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+  const el    = document.createElement('div');
+  el.className = `${color} text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg mb-2`;
+  el.textContent = message;
+  toast.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+loadLicenses();
+</script>
+
+<%- include('../_partials/footer', { User, Settings }) %>

@@ -1,0 +1,157 @@
+<%- include('_partials/header', { Title: product.name, User, Settings }) %>
+
+<%
+  let images = [];
+  try { images = JSON.parse(product.images || '[]'); } catch(e) {}
+  const thumb = images[0] || '/img/placeholder.png';
+%>
+
+<!-- Breadcrumb -->
+<div class="border-b border-white/5">
+  <div class="max-w-7xl mx-auto px-6 py-3 text-sm text-gray-500">
+    <a href="/" class="hover:text-white transition-colors">Home</a>
+    <span class="mx-2">/</span>
+    <a href="/store" class="hover:text-white transition-colors">Store</a>
+    <% if (product.category_slug) { %>
+      <span class="mx-2">/</span>
+      <a href="/store?category=<%= product.category_slug %>" class="hover:text-white transition-colors"><%= product.category_name %></a>
+    <% } %>
+    <span class="mx-2">/</span>
+    <span class="text-white"><%= product.name %></span>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 py-12">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+    <!-- Left: Image gallery -->
+    <div>
+      <!-- Main image -->
+      <div class="w-full aspect-video bg-gradient-to-br from-cyan-900/20 to-blue-900/20 rounded-2xl overflow-hidden border border-white/8 mb-3">
+        <img id="main-image"
+             src="<%= thumb %>"
+             alt="<%= product.name %>"
+             class="w-full h-full object-cover"
+             onerror="this.src='/img/placeholder.png'">
+      </div>
+
+      <!-- Thumbnails -->
+      <% if (images.length > 1) { %>
+        <div class="flex gap-2 overflow-x-auto pb-1">
+          <% images.forEach(function(img, i) { %>
+            <img src="<%= img %>"
+                 alt="<%= product.name %> screenshot <%= i + 1 %>"
+                 onclick="document.getElementById('main-image').src='<%= img %>'"
+                 class="w-20 h-14 object-cover rounded-lg border border-white/10 hover:border-cyan-500/50 cursor-pointer transition-all flex-shrink-0"
+                 onerror="this.style.display='none'">
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Right: Product info -->
+    <div class="flex flex-col">
+
+      <!-- Category -->
+      <% if (product.category_name) { %>
+        <div class="mb-3">
+          <span class="px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium rounded-full">
+            <i class="fas fa-tag mr-1"></i><%= product.category_name %>
+          </span>
+        </div>
+      <% } %>
+
+      <!-- Name -->
+      <h1 class="text-4xl font-black text-white mb-3"><%= product.name %></h1>
+
+      <!-- Meta -->
+      <div class="flex items-center gap-4 text-sm text-gray-500 mb-6">
+        <% if (product.sales > 0) { %>
+          <span><i class="fas fa-download mr-1"></i><%= product.sales %> sold</span>
+        <% } %>
+        <% if (product.version) { %>
+          <span><i class="fas fa-code-branch mr-1"></i>v<%= product.version %></span>
+        <% } %>
+        <span><i class="fas fa-shield-alt mr-1"></i>License included</span>
+        <span><i class="fas fa-bolt mr-1"></i>Instant delivery</span>
+      </div>
+
+      <!-- Description -->
+      <div class="text-gray-300 text-sm leading-relaxed mb-8 flex-1">
+        <%= product.description || 'No description provided.' %>
+      </div>
+
+      <!-- Price + action -->
+      <div class="bg-white/3 border border-white/8 rounded-2xl p-6">
+        <div class="flex items-end gap-2 mb-5">
+          <span class="text-4xl font-black text-white">£<%= parseFloat(product.price).toFixed(2) %></span>
+          <span class="text-gray-500 text-sm mb-1">one-time</span>
+        </div>
+
+        <% if (owns) { %>
+          <!-- Already owns: show download -->
+          <a href="/download/<%= product.id %>"
+             class="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-500 hover:bg-green-400 text-black font-bold rounded-xl transition-all duration-200 hover:scale-[1.02] mb-3">
+            <i class="fas fa-download"></i> Download
+          </a>
+          <p class="text-center text-xs text-gray-500">You own this product. View your license in your <a href="/dashboard" class="text-cyan-400 hover:text-cyan-300">dashboard</a>.</p>
+
+        <% } else if (User.loggedIn) { %>
+          <!-- Logged in: buy button -->
+          <button onclick="handlePurchase('<%= product.id %>')"
+                  id="buy-btn"
+                  class="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl transition-all duration-200 hover:scale-[1.02] mb-3">
+            <i class="fas fa-shopping-cart"></i> Purchase — £<%= parseFloat(product.price).toFixed(2) %>
+          </button>
+          <p class="text-center text-xs text-gray-500">Secure payment via Stripe. License key delivered instantly.</p>
+
+        <% } else { %>
+          <!-- Not logged in -->
+          <a href="/login"
+             class="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl transition-all duration-200 hover:scale-[1.02] mb-3">
+            <i class="fas fa-sign-in-alt"></i> Sign in to Purchase
+          </a>
+          <p class="text-center text-xs text-gray-500">You need an account to buy and manage your licenses.</p>
+        <% } %>
+
+        <!-- Features list -->
+        <div class="mt-5 pt-5 border-t border-white/8 grid grid-cols-2 gap-2 text-xs text-gray-400">
+          <div class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> Unique license key</div>
+          <div class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> Lifetime updates</div>
+          <div class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> API validation</div>
+          <div class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> Discord support</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function handlePurchase(productId) {
+  const btn = document.getElementById('buy-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
+
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: productId })
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert(data.error || 'Something went wrong. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Purchase — £<%= parseFloat(product.price).toFixed(2) %>';
+    }
+  } catch (e) {
+    alert('Network error. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Purchase — £<%= parseFloat(product.price).toFixed(2) %>';
+  }
+}
+</script>
+
+<%- include('_partials/footer', { User, Settings }) %>

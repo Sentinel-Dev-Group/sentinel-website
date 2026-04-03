@@ -1,0 +1,233 @@
+<%- include('../_partials/header', { Title: 'Admin Panel', User, Settings }) %>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between mb-10">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="px-2 py-0.5 text-xs bg-red-500/10 border border-red-500/20 text-red-400 rounded-full">Admin</span>
+        <span class="text-gray-500 text-sm">Sentinel Development</span>
+      </div>
+      <h1 class="text-3xl font-black">Control Panel</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/store" target="_blank"
+         class="px-4 py-2 border border-white/10 text-gray-400 text-sm rounded-xl hover:border-white/30 hover:text-white transition-all">
+        <i class="fas fa-external-link-alt mr-2"></i>View Store
+      </a>
+    </div>
+  </div>
+
+  <!-- Live stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10" id="stats-grid">
+    <div class="bg-white/3 border border-white/8 rounded-2xl p-5 animate-pulse">
+      <div class="h-8 bg-white/5 rounded mb-2"></div>
+      <div class="h-4 bg-white/5 rounded w-2/3"></div>
+    </div>
+    <div class="bg-white/3 border border-white/8 rounded-2xl p-5 animate-pulse">
+      <div class="h-8 bg-white/5 rounded mb-2"></div>
+      <div class="h-4 bg-white/5 rounded w-2/3"></div>
+    </div>
+    <div class="bg-white/3 border border-white/8 rounded-2xl p-5 animate-pulse">
+      <div class="h-8 bg-white/5 rounded mb-2"></div>
+      <div class="h-4 bg-white/5 rounded w-2/3"></div>
+    </div>
+    <div class="bg-white/3 border border-white/8 rounded-2xl p-5 animate-pulse">
+      <div class="h-8 bg-white/5 rounded mb-2"></div>
+      <div class="h-4 bg-white/5 rounded w-2/3"></div>
+    </div>
+  </div>
+
+  <!-- Quick nav cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+    <a href="/admin/products"
+       class="group bg-white/3 border border-white/8 hover:border-cyan-500/30 rounded-2xl p-6 transition-all hover:bg-white/5">
+      <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4 group-hover:bg-cyan-500/20 transition-colors">
+        <i class="fas fa-box text-cyan-400"></i>
+      </div>
+      <h3 class="font-bold text-white mb-1">Products</h3>
+      <p class="text-gray-500 text-xs">Add, edit and delete plugins and mods.</p>
+    </a>
+    <a href="/admin/orders"
+       class="group bg-white/3 border border-white/8 hover:border-cyan-500/30 rounded-2xl p-6 transition-all hover:bg-white/5">
+      <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4 group-hover:bg-cyan-500/20 transition-colors">
+        <i class="fas fa-receipt text-cyan-400"></i>
+      </div>
+      <h3 class="font-bold text-white mb-1">Orders</h3>
+      <p class="text-gray-500 text-xs">View all purchases and payment history.</p>
+    </a>
+    <a href="/admin/customers"
+       class="group bg-white/3 border border-white/8 hover:border-cyan-500/30 rounded-2xl p-6 transition-all hover:bg-white/5">
+      <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4 group-hover:bg-cyan-500/20 transition-colors">
+        <i class="fas fa-users text-cyan-400"></i>
+      </div>
+      <h3 class="font-bold text-white mb-1">Customers</h3>
+      <p class="text-gray-500 text-xs">Browse registered users and their spend.</p>
+    </a>
+    <a href="/admin/licenses"
+       class="group bg-white/3 border border-white/8 hover:border-cyan-500/30 rounded-2xl p-6 transition-all hover:bg-white/5">
+      <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4 group-hover:bg-cyan-500/20 transition-colors">
+        <i class="fas fa-key text-cyan-400"></i>
+      </div>
+      <h3 class="font-bold text-white mb-1">Licenses</h3>
+      <p class="text-gray-500 text-xs">Manage, suspend and reset license keys.</p>
+    </a>
+  </div>
+
+  <!-- Recent orders -->
+  <div class="mb-10">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-xl font-bold flex items-center gap-2">
+        <i class="fas fa-clock text-cyan-400"></i> Recent Orders
+      </h2>
+      <a href="/admin/orders" class="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">View all →</a>
+    </div>
+    <div class="bg-white/3 border border-white/8 rounded-2xl overflow-hidden" id="recent-orders">
+      <div class="p-8 text-center text-gray-600 text-sm">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Recent licenses -->
+  <div>
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-xl font-bold flex items-center gap-2">
+        <i class="fas fa-key text-cyan-400"></i> Recent Licenses
+      </h2>
+      <a href="/admin/licenses" class="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">View all →</a>
+    </div>
+    <div class="bg-white/3 border border-white/8 rounded-2xl overflow-hidden" id="recent-licenses">
+      <div class="p-8 text-center text-gray-600 text-sm">Loading...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function loadStats() {
+  try {
+    const [orders, customers, products, licenses] = await Promise.all([
+      fetch('/api/admin/orders').then(r => r.json()),
+      fetch('/api/admin/customers').then(r => r.json()),
+      fetch('/api/admin/products').then(r => r.json()),
+      fetch('/api/admin/licenses').then(r => r.json()),
+    ]);
+
+    const totalRevenue = orders.orders
+      ? orders.orders.reduce((s, o) => s + parseFloat(o.total || 0), 0).toFixed(2)
+      : '0.00';
+
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="bg-white/3 border border-white/8 rounded-2xl p-5">
+        <p class="text-3xl font-black text-cyan-400">£${totalRevenue}</p>
+        <p class="text-gray-500 text-sm mt-1">Total revenue</p>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-2xl p-5">
+        <p class="text-3xl font-black text-cyan-400">${orders.total || 0}</p>
+        <p class="text-gray-500 text-sm mt-1">Total orders</p>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-2xl p-5">
+        <p class="text-3xl font-black text-cyan-400">${customers.length || 0}</p>
+        <p class="text-gray-500 text-sm mt-1">Customers</p>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-2xl p-5">
+        <p class="text-3xl font-black text-cyan-400">${licenses.length || 0}</p>
+        <p class="text-gray-500 text-sm mt-1">Active licenses</p>
+      </div>
+    `;
+
+    // Recent orders table
+    const recentOrders = (orders.orders || []).slice(0, 5);
+    if (recentOrders.length === 0) {
+      document.getElementById('recent-orders').innerHTML = `
+        <div class="p-8 text-center text-gray-600 text-sm">No orders yet.</div>`;
+    } else {
+      document.getElementById('recent-orders').innerHTML = `
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-white/8 text-gray-500 text-xs uppercase tracking-wide">
+              <th class="text-left px-5 py-3">Customer</th>
+              <th class="text-left px-5 py-3">Products</th>
+              <th class="text-left px-5 py-3">Date</th>
+              <th class="text-left px-5 py-3">Status</th>
+              <th class="text-right px-5 py-3">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recentOrders.map(o => `
+              <tr class="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+                <td class="px-5 py-4">
+                  <p class="font-medium text-white">${o.userName}</p>
+                  <p class="text-xs text-gray-500">${o.userEmail}</p>
+                </td>
+                <td class="px-5 py-4 text-gray-300">${o.products}</td>
+                <td class="px-5 py-4 text-gray-400">
+                  ${new Date(o.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </td>
+                <td class="px-5 py-4">
+                  <span class="px-2 py-0.5 text-xs rounded-full border ${
+                    o.status === 'completed' ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+                    o.status === 'refunded'  ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                                               'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+                  }">${o.status}</span>
+                </td>
+                <td class="px-5 py-4 text-right font-bold text-white">£${parseFloat(o.total).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    // Recent licenses
+    const recentLicenses = licenses.slice(0, 5);
+    if (recentLicenses.length === 0) {
+      document.getElementById('recent-licenses').innerHTML = `
+        <div class="p-8 text-center text-gray-600 text-sm">No licenses yet.</div>`;
+    } else {
+      document.getElementById('recent-licenses').innerHTML = `
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-white/8 text-gray-500 text-xs uppercase tracking-wide">
+              <th class="text-left px-5 py-3">Customer</th>
+              <th class="text-left px-5 py-3">Product</th>
+              <th class="text-left px-5 py-3">Key</th>
+              <th class="text-left px-5 py-3">Status</th>
+              <th class="text-left px-5 py-3">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recentLicenses.map(l => `
+              <tr class="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+                <td class="px-5 py-4">
+                  <p class="font-medium text-white">${l.userName}</p>
+                  <p class="text-xs text-gray-500">${l.userEmail}</p>
+                </td>
+                <td class="px-5 py-4 text-gray-300">${l.product_name}</td>
+                <td class="px-5 py-4">
+                  <code class="text-xs font-mono text-cyan-300 bg-black/40 px-2 py-1 rounded-lg border border-white/8">${l.key}</code>
+                </td>
+                <td class="px-5 py-4">
+                  <span class="px-2 py-0.5 text-xs rounded-full border ${
+                    l.status === 'active'    ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+                    l.status === 'suspended' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                                               'text-gray-400 bg-gray-500/10 border-gray-500/20'
+                  }">${l.status}</span>
+                </td>
+                <td class="px-5 py-4 text-gray-400">
+                  ${new Date(l.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    }
+
+  } catch(e) {
+    console.error('Failed to load admin stats', e);
+  }
+}
+
+loadStats();
+</script>
+
+<%- include('../_partials/footer', { User, Settings }) %>

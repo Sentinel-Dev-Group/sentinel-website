@@ -1,0 +1,462 @@
+<%- include('../_partials/header', { Title: 'Admin — Products', User, Settings }) %>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <a href="/admin" class="text-gray-500 hover:text-white text-sm transition-colors">Admin</a>
+        <span class="text-gray-600">/</span>
+        <span class="text-sm text-white">Products</span>
+      </div>
+      <h1 class="text-3xl font-black">Products</h1>
+    </div>
+    <button onclick="openModal()"
+            class="px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm rounded-xl transition-all hover:scale-105">
+      <i class="fas fa-plus mr-2"></i>Add Product
+    </button>
+  </div>
+
+  <!-- Product table -->
+  <div class="bg-white/3 border border-white/8 rounded-2xl overflow-hidden" id="products-table">
+    <div class="p-8 text-center text-gray-600 text-sm">Loading...</div>
+  </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div id="modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal()"></div>
+  <div class="relative flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+
+      <div class="flex items-center justify-between p-6 border-b border-white/8">
+        <h2 class="text-xl font-bold" id="modal-title">Add Product</h2>
+        <button onclick="closeModal()" class="text-gray-500 hover:text-white transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <input type="hidden" id="edit-id">
+
+        <!-- Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5">Product name</label>
+          <input type="text" id="f-name" placeholder="e.g. Advanced Economy Plugin"
+                 class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors">
+        </div>
+
+        <!-- Category + Price -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1.5">Category</label>
+            <select id="f-category"
+                    class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-colors">
+              <option value="">No category</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1.5">Price (£)</label>
+            <input type="number" id="f-price" placeholder="9.99" step="0.01" min="0"
+                   class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors">
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5">Description</label>
+          <textarea id="f-description" rows="4" placeholder="Describe what this plugin or mod does..."
+                    class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors resize-none"></textarea>
+        </div>
+
+        <!-- Images -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5">Product images</label>
+          <div class="border-2 border-dashed border-white/10 hover:border-cyan-500/30 rounded-xl p-6 text-center transition-colors cursor-pointer"
+               onclick="document.getElementById('f-images').click()">
+            <i class="fas fa-image text-2xl text-gray-600 mb-2 block"></i>
+            <p class="text-sm text-gray-500">Click to upload images</p>
+            <p class="text-xs text-gray-600 mt-1">PNG, JPG up to 10MB each</p>
+          </div>
+          <input type="file" id="f-images" multiple accept="image/*" class="hidden"
+                 onchange="previewImages(this)">
+          <div id="image-previews" class="flex gap-2 mt-2 flex-wrap"></div>
+        </div>
+
+        <!-- Toggles -->
+        <div class="flex gap-6">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <div class="relative">
+              <input type="checkbox" id="f-active" checked class="sr-only peer">
+              <div class="w-10 h-6 bg-white/10 peer-checked:bg-cyan-500 rounded-full transition-colors"></div>
+              <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+            </div>
+            <span class="text-sm text-gray-300">Active</span>
+          </label>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <div class="relative">
+              <input type="checkbox" id="f-featured" class="sr-only peer">
+              <div class="w-10 h-6 bg-white/10 peer-checked:bg-cyan-500 rounded-full transition-colors"></div>
+              <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+            </div>
+            <span class="text-sm text-gray-300">Featured</span>
+          </label>
+        </div>
+
+        <!-- File upload (shown after product created) -->
+        <div id="file-upload-section" class="hidden">
+          <label class="block text-sm font-medium text-gray-300 mb-1.5">
+            Downloadable file <span class="text-gray-500">(zip, jar, pbo, rar)</span>
+          </label>
+          <div class="flex gap-3">
+            <input type="text" id="f-version" placeholder="Version e.g. 1.0.0"
+                   class="w-40 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors">
+            <input type="file" id="f-file"
+                   accept=".zip,.jar,.pbo,.rar,.7z"
+                   class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-400 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:text-cyan-400 file:text-xs cursor-pointer">
+            <button onclick="uploadFile()"
+                    class="px-4 py-2.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm rounded-xl hover:bg-cyan-500/20 transition-colors whitespace-nowrap">
+              Upload
+            </button>
+          </div>
+          <p id="file-status" class="text-xs text-gray-600 mt-1.5"></p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 p-6 border-t border-white/8">
+        <button onclick="closeModal()"
+                class="px-5 py-2.5 border border-white/10 text-gray-400 text-sm rounded-xl hover:border-white/30 hover:text-white transition-all">
+          Cancel
+        </button>
+        <button onclick="saveProduct()"
+                id="save-btn"
+                class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm rounded-xl transition-all">
+          Save Product
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div id="delete-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
+  <div class="relative flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-[#0a0a0a] border border-red-500/20 rounded-2xl w-full max-w-sm p-6 text-center">
+      <div class="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-trash text-red-400 text-xl"></i>
+      </div>
+      <h3 class="text-xl font-bold mb-2">Delete Product?</h3>
+      <p class="text-gray-400 text-sm mb-6">This will permanently delete the product and all associated files. License keys will remain but the product will be inaccessible.</p>
+      <div class="flex gap-3">
+        <button onclick="closeDeleteModal()"
+                class="flex-1 px-4 py-2.5 border border-white/10 text-gray-400 text-sm rounded-xl hover:border-white/30 transition-all">
+          Cancel
+        </button>
+        <button onclick="confirmDelete()"
+                class="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-400 text-white font-bold text-sm rounded-xl transition-all">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let categories = [];
+let deleteTargetId = null;
+let currentEditId = null;
+
+async function init() {
+  // Load categories into select
+  const res = await fetch('/api/admin/products');
+  const data = await res.json();
+
+  // Fetch categories separately via products data
+  const catRes = await fetch('/store');
+  // Instead just hardcode from what we know — categories come from the DB
+  // We'll load them via a simple inline fetch
+  await loadCategories();
+  await loadProducts();
+}
+
+async function loadCategories() {
+  // We expose categories through the store page data
+  // Add a lightweight endpoint or reuse admin products
+  // For now pull unique categories from products
+  const res = await fetch('/api/admin/products');
+  const products = await res.json();
+  const seen = new Map();
+  products.forEach(p => {
+    if (p.category_id && p.category_name) {
+      seen.set(p.category_id, p.category_name);
+    }
+  });
+  categories = Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  const sel = document.getElementById('f-category');
+  sel.innerHTML = '<option value="">No category</option>';
+  categories.forEach(c => {
+    sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+  });
+}
+
+async function loadProducts() {
+  const res = await fetch('/api/admin/products');
+  const products = await res.json();
+
+  if (products.length === 0) {
+    document.getElementById('products-table').innerHTML = `
+      <div class="p-12 text-center">
+        <i class="fas fa-box-open text-4xl text-gray-700 mb-4 block"></i>
+        <p class="text-gray-400 font-medium mb-2">No products yet</p>
+        <p class="text-gray-600 text-sm mb-6">Click "Add Product" to create your first listing.</p>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('products-table').innerHTML = `
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-white/8 text-gray-500 text-xs uppercase tracking-wide">
+          <th class="text-left px-5 py-3">Product</th>
+          <th class="text-left px-5 py-3">Category</th>
+          <th class="text-left px-5 py-3">Price</th>
+          <th class="text-left px-5 py-3">Sales</th>
+          <th class="text-left px-5 py-3">Status</th>
+          <th class="text-right px-5 py-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${products.map(p => {
+          let thumb = '/img/placeholder.png';
+          try { const imgs = JSON.parse(p.images || '[]'); if (imgs[0]) thumb = imgs[0]; } catch(e) {}
+          return `
+          <tr class="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-3">
+                <img src="${thumb}" alt="${p.name}"
+                     class="w-10 h-10 rounded-lg object-cover border border-white/10"
+                     onerror="this.src='/img/placeholder.png'">
+                <div>
+                  <p class="font-medium text-white">${p.name}</p>
+                  <p class="text-xs text-gray-500">${p.slug}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-4 text-gray-400">${p.category_name || '—'}</td>
+            <td class="px-5 py-4 font-bold text-white">£${parseFloat(p.price).toFixed(2)}</td>
+            <td class="px-5 py-4 text-gray-400">${p.total_sales}</td>
+            <td class="px-5 py-4">
+              <div class="flex gap-2">
+                <span class="px-2 py-0.5 text-xs rounded-full border ${p.active ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-gray-400 bg-gray-500/10 border-gray-500/20'}">
+                  ${p.active ? 'Active' : 'Hidden'}
+                </span>
+                ${p.featured ? '<span class="px-2 py-0.5 text-xs rounded-full border text-cyan-400 bg-cyan-500/10 border-cyan-500/20">Featured</span>' : ''}
+              </div>
+            </td>
+            <td class="px-5 py-4">
+              <div class="flex items-center justify-end gap-2">
+                <a href="/product/${p.slug}" target="_blank"
+                   class="px-3 py-1.5 border border-white/10 text-gray-400 text-xs rounded-lg hover:border-white/30 hover:text-white transition-all">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <button onclick="openEdit(${JSON.stringify(p).replace(/"/g, '&quot;')})"
+                        class="px-3 py-1.5 border border-white/10 text-gray-400 text-xs rounded-lg hover:border-cyan-500/30 hover:text-cyan-400 transition-all">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="openDeleteModal('${p.id}')"
+                        class="px-3 py-1.5 border border-white/10 text-gray-400 text-xs rounded-lg hover:border-red-500/30 hover:text-red-400 transition-all">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function openModal() {
+  currentEditId = null;
+  document.getElementById('modal-title').textContent = 'Add Product';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-price').value = '';
+  document.getElementById('f-description').value = '';
+  document.getElementById('f-active').checked = true;
+  document.getElementById('f-featured').checked = false;
+  document.getElementById('f-category').value = '';
+  document.getElementById('image-previews').innerHTML = '';
+  document.getElementById('file-upload-section').classList.add('hidden');
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function openEdit(product) {
+  currentEditId = product.id;
+  document.getElementById('modal-title').textContent = 'Edit Product';
+  document.getElementById('edit-id').value = product.id;
+  document.getElementById('f-name').value = product.name;
+  document.getElementById('f-price').value = product.price;
+  document.getElementById('f-description').value = product.description || '';
+  document.getElementById('f-active').checked = !!product.active;
+  document.getElementById('f-featured').checked = !!product.featured;
+  document.getElementById('f-category').value = product.category_id || '';
+  document.getElementById('image-previews').innerHTML = '';
+  document.getElementById('file-upload-section').classList.remove('hidden');
+  document.getElementById('modal').classList.remove('hidden');
+
+  // Show existing images as previews
+  try {
+    const imgs = JSON.parse(product.images || '[]');
+    imgs.forEach(src => {
+      const img = document.createElement('img');
+      img.src = src;
+      img.className = 'w-16 h-16 object-cover rounded-lg border border-white/10';
+      document.getElementById('image-previews').appendChild(img);
+    });
+  } catch(e) {}
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  currentEditId = null;
+}
+
+function previewImages(input) {
+  const preview = document.getElementById('image-previews');
+  preview.innerHTML = '';
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.className = 'w-16 h-16 object-cover rounded-lg border border-white/10';
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveProduct() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  const formData = new FormData();
+  formData.append('name',        document.getElementById('f-name').value);
+  formData.append('price',       document.getElementById('f-price').value);
+  formData.append('description', document.getElementById('f-description').value);
+  formData.append('category_id', document.getElementById('f-category').value);
+  formData.append('active',      document.getElementById('f-active').checked);
+  formData.append('featured',    document.getElementById('f-featured').checked);
+
+  const images = document.getElementById('f-images').files;
+  Array.from(images).forEach(f => formData.append('images', f));
+
+  const isEdit = !!currentEditId;
+  const url    = isEdit ? `/api/admin/products/${currentEditId}` : '/api/admin/products';
+  const method = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const res  = await fetch(url, { method, body: formData });
+    const data = await res.json();
+
+    if (data.success) {
+      if (!isEdit) {
+        // Show file upload section now that the product exists
+        currentEditId = data.id;
+        document.getElementById('edit-id').value = data.id;
+        document.getElementById('file-upload-section').classList.remove('hidden');
+        document.getElementById('modal-title').textContent = 'Edit Product';
+        showToast('Product created! Now upload the downloadable file.', 'success');
+      } else {
+        closeModal();
+        showToast('Product updated successfully.', 'success');
+      }
+      await loadProducts();
+    } else {
+      showToast(data.error || 'Failed to save product.', 'error');
+    }
+  } catch(e) {
+    showToast('Network error.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Save Product';
+}
+
+async function uploadFile() {
+  const fileInput = document.getElementById('f-file');
+  const version   = document.getElementById('f-version').value;
+  const status    = document.getElementById('file-status');
+
+  if (!fileInput.files[0]) return showToast('Please select a file first.', 'error');
+  if (!currentEditId)      return showToast('Save the product first.', 'error');
+
+  const formData = new FormData();
+  formData.append('file',    fileInput.files[0]);
+  formData.append('version', version);
+
+  status.textContent = 'Uploading...';
+  status.className   = 'text-xs text-cyan-400 mt-1.5';
+
+  try {
+    const res  = await fetch(`/api/admin/products/${currentEditId}/file`, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.success) {
+      status.textContent = `✓ File uploaded: ${fileInput.files[0].name}`;
+      status.className   = 'text-xs text-green-400 mt-1.5';
+      showToast('File uploaded successfully.', 'success');
+    } else {
+      status.textContent = data.error || 'Upload failed.';
+      status.className   = 'text-xs text-red-400 mt-1.5';
+    }
+  } catch(e) {
+    status.textContent = 'Network error.';
+    status.className   = 'text-xs text-red-400 mt-1.5';
+  }
+}
+
+function openDeleteModal(id) {
+  deleteTargetId = id;
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+  deleteTargetId = null;
+  document.getElementById('delete-modal').classList.add('hidden');
+}
+
+async function confirmDelete() {
+  if (!deleteTargetId) return;
+  try {
+    const res = await fetch(`/api/admin/products/${deleteTargetId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      closeDeleteModal();
+      showToast('Product deleted.', 'success');
+      await loadProducts();
+    } else {
+      showToast(data.error || 'Failed to delete.', 'error');
+    }
+  } catch(e) {
+    showToast('Network error.', 'error');
+  }
+}
+
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  const color = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+  const el = document.createElement('div');
+  el.className = `${color} text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg mb-2`;
+  el.textContent = message;
+  toast.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+init();
+</script>
+
+<%- include('../_partials/footer', { User, Settings }) %>

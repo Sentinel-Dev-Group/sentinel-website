@@ -1,0 +1,277 @@
+<%- include('../_partials/header', { Title: 'Admin — Orders', User, Settings }) %>
+
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <a href="/admin" class="text-gray-500 hover:text-white text-sm transition-colors">Admin</a>
+        <span class="text-gray-600">/</span>
+        <span class="text-sm text-white">Orders</span>
+      </div>
+      <h1 class="text-3xl font-black">Orders</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="text-right">
+        <p class="text-2xl font-black text-cyan-400" id="total-revenue">—</p>
+        <p class="text-xs text-gray-500">Total revenue</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex flex-wrap items-center gap-3 mb-6">
+    <button onclick="filterOrders('all')"
+            id="filter-all"
+            class="px-3 py-1.5 text-sm rounded-lg border border-cyan-500 text-cyan-400 bg-cyan-500/10 transition-all">
+      All
+    </button>
+    <button onclick="filterOrders('completed')"
+            id="filter-completed"
+            class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all">
+      Completed
+    </button>
+    <button onclick="filterOrders('pending')"
+            id="filter-pending"
+            class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all">
+      Pending
+    </button>
+    <button onclick="filterOrders('refunded')"
+            id="filter-refunded"
+            class="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all">
+      Refunded
+    </button>
+    <div class="ml-auto relative">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+      <input type="text"
+             id="search-input"
+             placeholder="Search customer or product..."
+             oninput="searchOrders(this.value)"
+             class="w-64 bg-white/5 border border-white/10 rounded-lg py-1.5 pl-8 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 transition-colors">
+    </div>
+  </div>
+
+  <!-- Orders table -->
+  <div class="bg-white/3 border border-white/8 rounded-2xl overflow-hidden" id="orders-table">
+    <div class="p-8 text-center text-gray-600 text-sm">Loading...</div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex items-center justify-between mt-5" id="pagination" style="display:none!important">
+    <p class="text-sm text-gray-500" id="pagination-info"></p>
+    <div class="flex gap-2" id="pagination-buttons"></div>
+  </div>
+</div>
+
+<!-- Order detail modal -->
+<div id="detail-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeDetail()"></div>
+  <div class="relative flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-lg">
+      <div class="flex items-center justify-between p-6 border-b border-white/8">
+        <h2 class="text-xl font-bold">Order Detail</h2>
+        <button onclick="closeDetail()" class="text-gray-500 hover:text-white transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="p-6" id="detail-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allOrders = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let currentPage = 1;
+const perPage = 20;
+
+async function loadOrders() {
+  try {
+    const res = await fetch('/api/admin/orders?page=1');
+    const data = await res.json();
+    allOrders = data.orders || [];
+
+    const revenue = allOrders
+      .filter(o => o.status === 'completed')
+      .reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    document.getElementById('total-revenue').textContent = '£' + revenue.toFixed(2);
+
+    renderOrders();
+  } catch(e) {
+    document.getElementById('orders-table').innerHTML =
+      '<div class="p-8 text-center text-red-400 text-sm">Failed to load orders.</div>';
+  }
+}
+
+function filterOrders(status) {
+  currentFilter = status;
+  currentPage = 1;
+  ['all','completed','pending','refunded'].forEach(s => {
+    const btn = document.getElementById('filter-' + s);
+    if (s === status) {
+      btn.className = 'px-3 py-1.5 text-sm rounded-lg border border-cyan-500 text-cyan-400 bg-cyan-500/10 transition-all';
+    } else {
+      btn.className = 'px-3 py-1.5 text-sm rounded-lg border border-white/10 text-gray-400 hover:border-white/30 hover:text-white transition-all';
+    }
+  });
+  renderOrders();
+}
+
+function searchOrders(val) {
+  currentSearch = val.toLowerCase();
+  currentPage = 1;
+  renderOrders();
+}
+
+function renderOrders() {
+  let filtered = allOrders;
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(o => o.status === currentFilter);
+  }
+  if (currentSearch) {
+    filtered = filtered.filter(o =>
+      (o.userName  || '').toLowerCase().includes(currentSearch) ||
+      (o.userEmail || '').toLowerCase().includes(currentSearch) ||
+      (o.products  || '').toLowerCase().includes(currentSearch)
+    );
+  }
+
+  const total = filtered.length;
+  const start = (currentPage - 1) * perPage;
+  const page  = filtered.slice(start, start + perPage);
+
+  if (total === 0) {
+    document.getElementById('orders-table').innerHTML =
+      '<div class="p-12 text-center text-gray-600 text-sm">No orders found.</div>';
+    document.getElementById('pagination').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('orders-table').innerHTML = `
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-white/8 text-gray-500 text-xs uppercase tracking-wide">
+          <th class="text-left px-5 py-3">Customer</th>
+          <th class="text-left px-5 py-3">Products</th>
+          <th class="text-left px-5 py-3">Date</th>
+          <th class="text-left px-5 py-3">Status</th>
+          <th class="text-right px-5 py-3">Total</th>
+          <th class="text-right px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${page.map(o => `
+          <tr class="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+            <td class="px-5 py-4">
+              <p class="font-medium text-white">${o.userName}</p>
+              <p class="text-xs text-gray-500">${o.userEmail}</p>
+            </td>
+            <td class="px-5 py-4 text-gray-300 max-w-xs">
+              <span class="line-clamp-1">${o.products}</span>
+            </td>
+            <td class="px-5 py-4 text-gray-400 whitespace-nowrap">
+              ${new Date(o.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </td>
+            <td class="px-5 py-4">
+              <span class="px-2 py-0.5 text-xs rounded-full border ${
+                o.status === 'completed' ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+                o.status === 'refunded'  ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                                           'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+              }">${o.status}</span>
+            </td>
+            <td class="px-5 py-4 text-right font-bold text-white">
+              £${parseFloat(o.total).toFixed(2)}
+            </td>
+            <td class="px-5 py-4 text-right">
+              <button onclick='openDetail(${JSON.stringify(o).replace(/'/g, "&#39;")})'
+                      class="px-3 py-1.5 border border-white/10 text-gray-400 text-xs rounded-lg hover:border-cyan-500/30 hover:text-cyan-400 transition-all">
+                Detail
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+
+  // Pagination
+  const totalPages = Math.ceil(total / perPage);
+  const pag = document.getElementById('pagination');
+  if (totalPages > 1) {
+    pag.style.display = 'flex';
+    document.getElementById('pagination-info').textContent =
+      `Showing ${start + 1}–${Math.min(start + perPage, total)} of ${total} orders`;
+
+    let btns = '';
+    for (let i = 1; i <= totalPages; i++) {
+      btns += `<button onclick="goPage(${i})"
+                class="px-3 py-1.5 text-xs rounded-lg border transition-all ${
+                  i === currentPage
+                    ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10'
+                    : 'border-white/10 text-gray-400 hover:border-white/30'
+                }">${i}</button>`;
+    }
+    document.getElementById('pagination-buttons').innerHTML = btns;
+  } else {
+    pag.style.display = 'none';
+  }
+}
+
+function goPage(n) {
+  currentPage = n;
+  renderOrders();
+}
+
+function openDetail(order) {
+  document.getElementById('detail-content').innerHTML = `
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+          <p class="text-xs text-gray-500 mb-1">Order ID</p>
+          <code class="text-xs font-mono text-gray-300">${order.id}</code>
+        </div>
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+          <p class="text-xs text-gray-500 mb-1">Stripe Payment</p>
+          <code class="text-xs font-mono text-gray-300">${order.stripe_payment_id || '—'}</code>
+        </div>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-2">Customer</p>
+        <p class="font-medium text-white">${order.userName}</p>
+        <p class="text-sm text-gray-400">${order.userEmail}</p>
+      </div>
+      <div class="bg-white/3 border border-white/8 rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-2">Products</p>
+        <p class="text-white">${order.products}</p>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+          <p class="text-xs text-gray-500 mb-1">Total</p>
+          <p class="text-xl font-black text-white">£${parseFloat(order.total).toFixed(2)}</p>
+        </div>
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+          <p class="text-xs text-gray-500 mb-1">Status</p>
+          <span class="px-2 py-0.5 text-xs rounded-full border ${
+            order.status === 'completed' ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+            order.status === 'refunded'  ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                                           'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+          }">${order.status}</span>
+        </div>
+        <div class="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+          <p class="text-xs text-gray-500 mb-1">Date</p>
+          <p class="text-sm text-white">${new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('detail-modal').classList.remove('hidden');
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').classList.add('hidden');
+}
+
+loadOrders();
+</script>
+
+<%- include('../_partials/footer', { User, Settings }) %>

@@ -1,0 +1,118 @@
+<%- include('../_partials/header', { Title: 'Login', User, Settings }) %>
+<div class="flex-1 flex items-center justify-center p-4 sm:p-6">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="mx-auto w-16 h-16 mb-4 rounded-2xl overflow-hidden border border-white/10 shadow-lg">
+        <img src="<%= Settings.logo %>" alt="<%= Settings.logo %>" class="w-full h-full object-cover">
+      </div>
+      <h1 class="text-3xl font-bold mb-2">Welcome Back!</h1>
+      <p>Sign in to access your account</p>
+    </div>
+    <div class="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 shadow-2xl p-8">
+      <div id="Login" class="block">
+        <form action="/auth/local" method="POST" class="space-y-5">
+          <div class="space-y-1">
+            <label class="text-sm font-medium">Email or Username</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-user text-gray-500"></i>
+              </div>
+              <input type="text" name="username" placeholder="Enter your email or username" required class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200">
+            </div>
+          </div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium">Password</label>
+              <a href="/forgot-password" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">Forgot password?</a>
+            </div>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-lock text-gray-500"></i>
+              </div>
+              <input type="password" name="password" placeholder="••••••••" required class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200">
+            </div>
+          </div>
+          <div class="pt-2">
+            <button type="submit" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-sm font-medium py-3.5 px-5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transform">
+              <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+          </div>
+        </form>
+        <div class="mt-6">
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-white/10"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-2">Or continue with</span>
+            </div>
+          </div>
+          <div class="mt-6 grid grid-cols-3 gap-3">
+            <a href="/auth/discord" class="w-full flex items-center justify-center px-4 py-2 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+              <i class="fab fa-discord text-indigo-400"></i>
+            </a>
+            <a href="/auth/google" class="w-full flex items-center justify-center px-4 py-2 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+              <i class="fab fa-google text-red-400"></i>
+            </a>
+            <a href="/auth/github" class="w-full flex items-center justify-center px-4 py-2 border border-white/10 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+              <i class="fab fa-github"></i>
+            </a>
+          </div>
+        </div>
+        <div class="mt-6 text-center text-sm">
+          <p>Don't have an account? <a href="#" onclick="ToggleModal('Register', true); ToggleModal('Login', false); return false;" class="text-blue-400 hover:text-blue-300 transition-colors">Sign up</a></p>
+        </div>
+      </div>
+      <div id="Register" class="hidden">
+        <form action="/auth/local/register" method="POST" class="space-y-5">
+          <div class="space-y-1">
+            <label class="text-sm font-medium">Username</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-user text-gray-500"></i>
+              </div>
+              <input type="text" name="username" placeholder="Choose a username" required class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent transition-all duration-200">
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-medium">Email</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-envelope text-gray-500"></i>
+              </div>
+              <input type="email" name="email" placeholder="your@email.com" required class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent transition-all duration-200">
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-medium">Password</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-key text-gray-500"></i>
+              </div>
+              <input type="password" name="password" placeholder="Create a password" required class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent transition-all duration-200">
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-medium">Confirm Password</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-key text-gray-500"></i>
+              </div>
+              <input type="password" name="confirmPassword" placeholder="Confirm your password" required class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent transition-all duration-200">
+            </div>
+          </div>
+          <div class="pt-2">
+            <button type="submit" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-sm font-medium py-3.5 px-5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transform">
+              <i class="fas fa-user-plus"></i>
+              <span class="font-semibold">Create Account</span>
+            </button>
+          </div>
+        </form>
+        <div class="mt-6 text-center text-sm">
+          <p>Already have an account? <a href="#" onclick="ToggleModal('Login', true); ToggleModal('Register', false); return false;" class="text-green-400 hover:text-green-300 transition-colors">Sign in</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('../_partials/footer') %>

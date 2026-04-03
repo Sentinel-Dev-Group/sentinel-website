@@ -1,0 +1,154 @@
+</main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 bg-black/80 backdrop-blur-xl mt-auto">
+      <div class="max-w-7xl mx-auto px-6 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
+
+          <!-- Brand -->
+          <div class="md:col-span-2">
+            <div class="flex items-center gap-2.5 mb-4">
+              <div class="w-8 h-8 rounded-lg overflow-hidden border border-white/10">
+                <img src="<%= Settings.logo %>" alt="<%= Settings.name %>"
+                     class="w-full h-full object-cover"
+                     onerror="this.style.display='none'">
+              </div>
+              <span class="font-black text-lg">
+                <span class="text-white">Sentinel</span><span class="text-cyan-400"> Dev</span>
+              </span>
+            </div>
+            <p class="text-gray-500 text-sm leading-relaxed max-w-xs">
+              <%= Settings.dest %>
+            </p>
+            <div class="flex gap-3 mt-5">
+              <a href="/store?category=minecraft"
+                 class="px-3 py-1.5 bg-white/3 border border-white/8 hover:border-cyan-500/30 hover:text-cyan-400 text-gray-400 text-xs rounded-lg transition-all">
+                <i class="fas fa-cube mr-1.5"></i>Minecraft
+              </a>
+              <a href="/store?category=dayz"
+                 class="px-3 py-1.5 bg-white/3 border border-white/8 hover:border-cyan-500/30 hover:text-cyan-400 text-gray-400 text-xs rounded-lg transition-all">
+                <i class="fas fa-biohazard mr-1.5"></i>DayZ
+              </a>
+            </div>
+          </div>
+
+          <!-- Store links -->
+          <div>
+            <h4 class="text-sm font-bold text-white mb-4">Store</h4>
+            <ul class="space-y-2.5">
+              <li>
+                <a href="/store" class="text-gray-500 hover:text-white text-sm transition-colors">
+                  All Products
+                </a>
+              </li>
+              <li>
+                <a href="/store?category=minecraft" class="text-gray-500 hover:text-white text-sm transition-colors">
+                  Minecraft Plugins
+                </a>
+              </li>
+              <li>
+                <a href="/store?category=dayz" class="text-gray-500 hover:text-white text-sm transition-colors">
+                  DayZ Mods
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Account links -->
+          <div>
+            <h4 class="text-sm font-bold text-white mb-4">Account</h4>
+            <ul class="space-y-2.5">
+              <% if (User && User.loggedIn) { %>
+                <li>
+                  <a href="/dashboard" class="text-gray-500 hover:text-white text-sm transition-colors">
+                    Dashboard
+                  </a>
+                </li>
+                <li>
+                  <a href="/logout" class="text-gray-500 hover:text-white text-sm transition-colors">
+                    Sign out
+                  </a>
+                </li>
+              <% } else { %>
+                <li>
+                  <a href="/login" class="text-gray-500 hover:text-white text-sm transition-colors">
+                    Sign in
+                  </a>
+                </li>
+                <li>
+                  <a href="/login" class="text-gray-500 hover:text-white text-sm transition-colors">
+                    Register
+                  </a>
+                </li>
+              <% } %>
+              <li>
+                <a href="/api/license/validate" class="text-gray-500 hover:text-white text-sm transition-colors">
+                  License API
+                </a>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p class="text-gray-600 text-xs">
+            <%- Settings.footer || `© ${new Date().getFullYear()} ${Settings.name}. All rights reserved.` %>
+          </p>
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+            <span class="text-gray-600 text-xs">All systems operational</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast" class="fixed bottom-4 right-4 z-50 flex flex-col items-end"></div>
+
+  <script>
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const icon = document.getElementById('menu-icon');
+      menu.classList.toggle('open');
+      icon.className = menu.classList.contains('open') ? 'fas fa-times' : 'fas fa-bars';
+    }
+
+    function ToggleModal(id, show) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('hidden', !show);
+      el.classList.toggle('block', show);
+    }
+
+    // Show error from URL param on login page
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
+      const toast = document.getElementById('toast');
+      if (toast) {
+        const el = document.createElement('div');
+        el.className = 'bg-red-500 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg mb-2';
+        el.textContent = decodeURIComponent(error);
+        toast.appendChild(el);
+        setTimeout(() => el.remove(), 5000);
+      }
+    }
+
+    // Show success message after purchase redirect
+    const purchase = urlParams.get('purchase');
+    if (purchase === 'success') {
+      const toast = document.getElementById('toast');
+      if (toast) {
+        const el = document.createElement('div');
+        el.className = 'bg-green-500 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg mb-2';
+        el.textContent = '🎉 Purchase successful! Your license key is ready in your dashboard.';
+        toast.appendChild(el);
+        setTimeout(() => el.remove(), 6000);
+      }
+    }
+  </script>
+</body>
+</html>
