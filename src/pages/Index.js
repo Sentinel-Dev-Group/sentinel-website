@@ -2,7 +2,7 @@ module.exports = async function (app, con, config) {
 
   // GET / — store homepage with featured + all products
   app.get('/', function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
       con.query(
         `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
                 (SELECT COUNT(*) FROM license_keys lk WHERE lk.product_id = p.id) AS sales
@@ -13,7 +13,7 @@ module.exports = async function (app, con, config) {
         function (err, products) {
           if (err) return res.redirect('/');
           con.query(`SELECT * FROM categories`, function (err2, categories) {
-            res.render('index', { User, Settings, products, categories });
+            res.render('index', { User, Settings, isAdmin, products, categories });
           });
         }
       );
@@ -22,7 +22,7 @@ module.exports = async function (app, con, config) {
 
   // GET /store — full product listing with search + category filter
   app.get('/store', function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
       const { category, search } = req.query;
       let query = `
         SELECT p.*, c.name AS category_name, c.slug AS category_slug,
@@ -46,7 +46,7 @@ module.exports = async function (app, con, config) {
       con.query(query, params, function (err, products) {
         if (err) return res.redirect('/');
         con.query(`SELECT * FROM categories`, function (err2, categories) {
-          res.render('store', { User, Settings, products, categories, search: search || '', category: category || '' });
+          res.render('store', { User, Settings, isAdmin, products, categories, search: search || '', category: category || '' });
         });
       });
     });
@@ -54,7 +54,7 @@ module.exports = async function (app, con, config) {
 
   // GET /product/:slug — single product page
   app.get('/product/:slug', function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
       con.query(
         `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
                 pf.filename, pf.version,
@@ -69,17 +69,15 @@ module.exports = async function (app, con, config) {
           if (err || !rows[0]) return res.redirect('/store');
           const product = rows[0];
 
-          // Parse images JSON safely
           try { product.images = JSON.parse(product.images || '[]'); }
           catch (e) { product.images = []; }
 
-          // Check if logged in user already owns this product
           if (User.loggedIn) {
             userOwnsProduct(User.id, product.id, function (owns) {
-              res.render('product', { User, Settings, product, owns });
+              res.render('product', { User, Settings, isAdmin, product, owns });
             });
           } else {
-            res.render('product', { User, Settings, product, owns: false });
+            res.render('product', { User, Settings, isAdmin, product, owns: false });
           }
         }
       );
@@ -107,8 +105,8 @@ module.exports = async function (app, con, config) {
   // GET /login
   app.get('/login', function (req, res) {
     if (req.isAuthenticated()) return res.redirect('/');
-    GetUserInfo(req, res, function (User, Settings) {
-      res.render('utils/login', { User, Settings });
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
+      res.render('utils/login', { User, Settings, isAdmin });
     });
   });
 
@@ -119,7 +117,7 @@ module.exports = async function (app, con, config) {
 
   // GET /dashboard — user's purchases, keys and downloads
   app.get('/dashboard', requireAuth, function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
       con.query(
         `SELECT lk.*, p.name AS product_name, p.slug AS product_slug,
                 p.images, pf.filename, pf.version
@@ -145,7 +143,7 @@ module.exports = async function (app, con, config) {
              ORDER BY o.created_at DESC`,
             [User.id],
             function (err2, orders) {
-              res.render('dashboard', { User, Settings, licenses, orders: orders || [] });
+              res.render('dashboard', { User, Settings, isAdmin, licenses, orders: orders || [] });
             }
           );
         }
@@ -155,32 +153,32 @@ module.exports = async function (app, con, config) {
 
   // GET /admin — admin panel (page guard, not API guard)
   app.get('/admin', requireAdminPage, function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
-      res.render('admin/index', { User, Settings });
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
+      res.render('admin/index', { User, Settings, isAdmin });
     });
   });
 
   app.get('/admin/products', requireAdminPage, function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
-      res.render('admin/products', { User, Settings });
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
+      res.render('admin/products', { User, Settings, isAdmin });
     });
   });
 
   app.get('/admin/orders', requireAdminPage, function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
-      res.render('admin/orders', { User, Settings });
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
+      res.render('admin/orders', { User, Settings, isAdmin });
     });
   });
 
   app.get('/admin/customers', requireAdminPage, function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
-      res.render('admin/customers', { User, Settings });
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
+      res.render('admin/customers', { User, Settings, isAdmin });
     });
   });
 
   app.get('/admin/licenses', requireAdminPage, function (req, res) {
-    GetUserInfo(req, res, function (User, Settings) {
-      res.render('admin/licenses', { User, Settings });
+    GetUserInfo(req, res, function (User, Settings, isAdmin) {
+      res.render('admin/licenses', { User, Settings, isAdmin });
     });
   });
 };

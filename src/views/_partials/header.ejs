@@ -96,7 +96,7 @@
              class="nav-link text-sm font-medium pb-0.5">
             DayZ
           </a>
-          <% if (User.loggedIn && locals.Settings && require('../../../config').SiteInformation.OwnerIDS.includes(User.id)) { %>
+          <% if (User.loggedIn && locals.isAdmin) { %>
             <a href="/admin"
                class="nav-link text-sm font-medium pb-0.5 text-red-400 hover:text-red-300">
               Admin
@@ -158,7 +158,7 @@
           <a href="/dashboard" class="block px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
             <i class="fas fa-user mr-2 text-cyan-400"></i>Dashboard
           </a>
-          <% if (locals.Settings && require('../../../config').SiteInformation.OwnerIDS.includes(User.id)) { %>
+          <% if (locals.isAdmin) { %>
             <a href="/admin" class="block px-3 py-2.5 rounded-xl text-sm text-red-400 hover:text-red-300 hover:bg-white/5 transition-all">
               <i class="fas fa-shield-alt mr-2"></i>Admin Panel
             </a>

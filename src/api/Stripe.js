@@ -1,8 +1,8 @@
-const stripe = require('stripe')(config.Tokens.StripeSecretKey);
 const { v4: uuidv4 } = require('uuid');
 const express = require('express');
 
 module.exports = async function (app, con, config) {
+  const stripe = require('stripe')(config.Tokens.StripeSecretKey);
 
   // POST /api/checkout
   // Creates a Stripe Checkout session and returns the redirect URL
