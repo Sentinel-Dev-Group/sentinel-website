@@ -1,8 +1,10 @@
 {
-  "name": "val-ejs-template",
+
+  "name": "sentinel-development",
   "version": "1.0.0",
-  "author": "Val",
-  "description": "Val EJS Template",
+  "author": "Sentinel Development",
+  "description": "Sentinel Development Store",
+
   "main": "index.js",
   "private": true,
   "dependencies": {
